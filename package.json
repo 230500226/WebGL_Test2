@@ -1,0 +1,16 @@
+{
+  "name": "webgl_hellotriangle",
+  "version": "1.0.0",
+  "description": "",
+  "main": "helloTriangle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "browser-sync start --server --files \"**/*\" --no-open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browser-sync": "^3.0.2"
+  }
+}

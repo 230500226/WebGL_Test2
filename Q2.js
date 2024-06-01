@@ -22,48 +22,45 @@ function main(){
     
     const vertexData = [
         //square 1 
-        // Triangle 1
         -0.5, -0.5, 0, //bot left
         -0.5, 0.5, 0, //top left
         0.5, 0.5, 0, //top right
 
-        // Triangle 2
-        -0.5, -0.5, 0, //bot left
         0.5, 0.5, 0, //top right
-        -0.5, -0.5, 0, //bottom right
+        0.5, -0.5, 0, //bot right
+        -0.5, -0.5, 0, //bot left
 
         //square 2
-        // Triangle 1
-        -0.5, -0.5, 1, //bot left
-        -0.5, 0.5, 1, //top left
-        0.5, 0.5, 1, //top right
+        -0.5, -0.5, -1, //bot left
+        -0.5, 0.5, -1, //top left
+        0.5, 0.5, -1, //top right
 
-        // Triangle 2
-        -0.5, -0.5, 1, //bot left
-        0.5, 0.5, 1, //top right
-        -0.5, -0.5, 1 //bottom right
+        0.5, 0.5, -1, //top right
+        0.5, -0.5, -1, //bot right
+        -0.5, -0.5, -1, //bot left
     ];
-
-    const textureData = [ //Step 1 add texture coordinates
+    
+    const textureData = [ //step1 replace the colordata with texturedata coordinates
+        // I swapped the y values around to flip the image the rightside up
         // Corresponding to Triangle 1
-        0, 0, //bot left
-        0, 1, //top left
-        1, 1, //top right
+        0, 1, //bot left
+        0, 0, //top left
+        1, 0, //top right
 
         // Corresponding to Triangle 2
-        0, 0, //bot left
-        1, 1, //top right
-        1, 0,  //bot right
+        1, 0, //top right
+        1, 1,  //bot right
+        0, 1, //bot left
 
         // Corresponding to Triangle 1
-        0, 0, //bot left
-        0, 1, //top left
-        1, 1, //top right
+        0, 1, //bot left
+        0, 0, //top left
+        1, 0, //top right
 
         // Corresponding to Triangle 2
-        0, 0, //bot left
-        1, 1, //top right
-        1, 0,  //bot right
+        1, 0, //top right
+        1, 1,  //bot right
+        0, 1, //bot left
     ]
 
     // Position buffer for position attribute
@@ -71,7 +68,7 @@ function main(){
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
 
-    // Step 2 Texture buffer for texture attribute Replaces the color buffer
+    // step2 create textture buffer 
     const textureBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureData), gl.STATIC_DRAW);
@@ -80,7 +77,7 @@ function main(){
         precision mediump float;
 
         attribute vec3 position;
-        attribute vec2 texture; //Step 3 replace color with the texture coordinates vertexshader remember its a vec2
+        attribute vec2 texture; //step3 change to vec 2 and call it texture
         varying vec2 vTexture;
 
         void main() {
@@ -101,8 +98,9 @@ function main(){
     const fragmentShaderSourceCode =`
         precision mediump float;
     
-        varying vec2 vTexture; // Step 4 replace color with texture fragment shader
-        uniform sampler2D sampler; // Add a sampler uniform this one is called sampler 
+        varying vec2 vTexture;
+        uniform sampler2D sampler; //step4 add this line then use the texture2D instead
+    
         void main() {
             gl_FragColor = texture2D(sampler, vTexture);
         }
@@ -136,39 +134,37 @@ function main(){
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-    // Step 5 replace the AttribLocation for the texture
-    const textureLocation = gl.getAttribLocation(program, `texture`); 
+    //step5 set up the texture location
+    const textureLocation = gl.getAttribLocation(program, `texture`);
     if (textureLocation < 0) {
-        showError(`Failed to get attribute location for texure`);
+        showError(`Failed to get attribute location for texture`);
         return;
     }
     gl.enableVertexAttribArray(textureLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
     gl.vertexAttribPointer(textureLocation, 2, gl.FLOAT, false, 0, 0);
-   
-    // Step 6 create the texture (*_*)
+
+    //step6 create the texture
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    // Step 7 insert the picture to use in here by the ID
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('myJpegId'));
-    // gl.bindTexture(gl.TEXTURE_2D, null);
+    //set the texure picture here by id
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('pictureID'));
 
     gl.useProgram(program);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing for a 3d object
 
     // Used later for perspective 
     canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeightTest;
+    canvas.height = canvas.clientHeight;
 
     function animate() {
         //requestAnimationFrame(animate);
         gl.clearColor(0.0, 0.2, 0.0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
         //first square red
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.drawArrays(gl.TRIANGLES, 3, 3);

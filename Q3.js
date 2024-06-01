@@ -6,7 +6,7 @@ function showError(errorText) {
     console.error(errorText);
 }
 
-showError("This is Q1");
+showError("This is Q2");
 
 function main(){
     const canvas  = document.getElementById("IDcanvas");
@@ -31,54 +31,36 @@ function main(){
         -0.5, -0.5, 0, //bot left
 
         //square 2
-        -0.5, -0.5, -1,
-        -0.5, 0.5, -1,
-        0.5, 0.5, -1,
+        -0.5, -0.5, -1, //bot left
+        -0.5, 0.5, -1, //top left
+        0.5, 0.5, -1, //top right
 
-        0.5, 0.5, -1,
-        0.5, -0.5, -1,
-        -0.5, -0.5, -1,
+        0.5, 0.5, -1, //top right
+        0.5, -0.5, -1, //bot right
+        -0.5, -0.5, -1, //bot left
     ];
     
-    const colorData = [
-        //square 2
-        0,0,1,
-        0,0,1,
-        0,0,1,
-        
-        0,0,1,
-        0,0,1,
-        0,0,1,
-        //square 1 
-        1,0,0,
-        1,0,0,
-        1,0,0,
-
-        1,0,0,
-        1,0,0,
-        1,0,0,
-    ];
-
-   const textureData = [ //Step 1 add texture coordinates
+    const textureData = [ //step1 replace the colordata with texturedata coordinates
+        // I swapped the y values around to flip the image the rightside up
         // Corresponding to Triangle 1
-        0, 0, //bot left
-        0, 1, //top left
-        1, 1, //top right
+        0, 1, //bot left
+        0, 0, //top left
+        1, 0, //top right
 
         // Corresponding to Triangle 2
-        1, 1, //top right
-        1, 0,  //bot right
-        0, 0, //bot left
+        1, 0, //top right
+        1, 1,  //bot right
+        0, 1, //bot left
 
-      // Corresponding to Triangle 1
-        0, 0, //bot left
-        0, 1, //top left
-        1, 1, //top right
+        // Corresponding to Triangle 1
+        0, 1, //bot left
+        0, 0, //top left
+        1, 0, //top right
 
         // Corresponding to Triangle 2
-        1, 1, //top right
-        1, 0,  //bot right
-        0, 0, //bot left
+        1, 0, //top right
+        1, 1,  //bot right
+        0, 1, //bot left
     ]
 
     // Position buffer for position attribute
@@ -86,7 +68,7 @@ function main(){
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
 
-    // Color buffer for color attribute
+    // step2 create textture buffer 
     const textureBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureData), gl.STATIC_DRAW);
@@ -95,7 +77,7 @@ function main(){
         precision mediump float;
 
         attribute vec3 position;
-        attribute vec2 texture;
+        attribute vec2 texture; //step3 change to vec 2 and call it texture
         varying vec2 vTexture;
 
         void main() {
@@ -117,7 +99,7 @@ function main(){
         precision mediump float;
     
         varying vec2 vTexture;
-        uniform sampler2D sampler;
+        uniform sampler2D sampler; //step4 add this line then use the texture2D instead
     
         void main() {
             gl_FragColor = texture2D(sampler, vTexture);
@@ -152,7 +134,7 @@ function main(){
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-
+    //step5 set up the texture location
     const textureLocation = gl.getAttribLocation(program, `texture`);
     if (textureLocation < 0) {
         showError(`Failed to get attribute location for texture`);
@@ -162,15 +144,15 @@ function main(){
     gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
     gl.vertexAttribPointer(textureLocation, 2, gl.FLOAT, false, 0, 0);
 
+    //step6 create the texture
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    //set the texure picture here by id
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('pictureID'));
-    //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 4);
-    //gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.useProgram(program);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing for a 3d object

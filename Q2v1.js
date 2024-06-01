@@ -22,13 +22,13 @@ function main(){
     
     const vertexData = [
         //square 1 
-        -0.5, -0.5, 0,
-        -0.5, 0.5, 0,
-        0.5, 0.5, 0,
+        -0.5, -0.5, 0, //bot left
+        -0.5, 0.5, 0, //top left
+        0.5, 0.5, 0, //top right
 
-        0.5, 0.5, 0,
-        0.5, -0.5, 0,
-        -0.5, -0.5, 0,
+        0.5, 0.5, 0, //top right
+        0.5, -0.5, 0, //bot right
+        -0.5, -0.5, 0, //bot left
 
         //square 2
         -0.5, -0.5, -1,
@@ -66,19 +66,19 @@ function main(){
         1, 1, //top right
 
         // Corresponding to Triangle 2
-        0, 0, //bot left
         1, 1, //top right
         1, 0,  //bot right
+        0, 0, //bot left
 
-        // Corresponding to Triangle 1
+      // Corresponding to Triangle 1
         0, 0, //bot left
         0, 1, //top left
         1, 1, //top right
 
         // Corresponding to Triangle 2
-        0, 0, //bot left
         1, 1, //top right
         1, 0,  //bot right
+        0, 0, //bot left
     ]
 
     // Position buffer for position attribute
@@ -87,19 +87,19 @@ function main(){
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexData), gl.STATIC_DRAW);
 
     // Color buffer for color attribute
-    const colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorData), gl.STATIC_DRAW);
+    const textureBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureData), gl.STATIC_DRAW);
     
     const vertexShaderSourceCode = `
         precision mediump float;
 
         attribute vec3 position;
-        attribute vec3 color;
-        varying vec3 vColor;
+        attribute vec2 texture;
+        varying vec2 vTexture;
 
         void main() {
-            vColor = color;
+            vTexture = texture;
             gl_Position = vec4(position, 1);
         }
     `;
@@ -116,10 +116,11 @@ function main(){
     const fragmentShaderSourceCode =`
         precision mediump float;
     
-        varying vec3 vColor;
+        varying vec2 vTexture;
+        uniform sampler2D sampler;
     
         void main() {
-            gl_FragColor = vec4(vColor, 1);
+            gl_FragColor = texture2D(sampler, vTexture);
         }
     `;
 
@@ -152,14 +153,24 @@ function main(){
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
 
-    const colorLocation = gl.getAttribLocation(program, `color`);
-    if (colorLocation < 0) {
-        showError(`Failed to get attribute location for color`);
+    const textureLocation = gl.getAttribLocation(program, `texture`);
+    if (textureLocation < 0) {
+        showError(`Failed to get attribute location for texture`);
         return;
     }
-    gl.enableVertexAttribArray(colorLocation);
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(textureLocation);
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
+    gl.vertexAttribPointer(textureLocation, 2, gl.FLOAT, false, 0, 0);
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('pictureID'));
+    //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 4);
+    //gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.useProgram(program);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing for a 3d object

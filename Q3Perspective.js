@@ -78,7 +78,6 @@ function main(){
         attribute vec3 position;
         attribute vec2 texture; 
         varying vec2 vTexture;
-        //step1 add the uniforms (similar steps apply to the rotations just add buttons to the html)
         uniform float moveX;
         uniform float moveY;
 
@@ -86,10 +85,13 @@ function main(){
         uniform mat4 u_rotateY;
         uniform mat4 u_rotateZ;
 
+        //step5 create the uniform for the perspective and view
+        uniform mat4 u_perspective;
+        uniform mat4 u_view;
+
         void main() {
             vTexture = texture;
-            //step2 add the uniform values to the position
-            gl_Position = u_rotateX * u_rotateY * u_rotateZ * vec4(position.x + moveX, position.y + moveY, position.z, 1);
+            gl_Position = u_perspective * u_view * u_rotateX * u_rotateY * u_rotateZ * vec4(position.x + moveX, position.y + moveY, position.z, 1);
         }
     `;
 
@@ -159,37 +161,62 @@ function main(){
     //set the texure picture here by id
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('pictureID'));
 
-    //step3 get the uniform locations
     const moveXLocation = gl.getUniformLocation(program, 'moveX');
     const moveYLocation = gl.getUniformLocation(program, 'moveY');
     const rotateXLocation = gl.getUniformLocation(program, 'u_rotateX');
     const rotateYLocation = gl.getUniformLocation(program, 'u_rotateY');
     const rotateZLocation = gl.getUniformLocation(program, 'u_rotateZ');
 
+    //step6 get uniform locations for the perspective and view
+    const perspectiveLocation = gl.getUniformLocation(program, 'u_perspective')
+    const viewLocation = gl.getUniformLocation(program, 'u_view');
+
     gl.useProgram(program);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing for a 3d object
 
-    // Used later for perspective 
+    // Used later for perspective i lied about this its just here now because
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
 
-    //step4 initialise the move varibles
+    //step2 create the output matrix that adonis perspective function will modify
+    var perspectiveMatrixOutput = [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    ]
+
+    //step3 use adonis perspective function call
+        //NOTE: it take the identity matrix and an input and modifies it within the function
+    perspective(perspectiveMatrixOutput, 75 * Math.PI / 180, canvas.width / canvas.height, 0.1, 10000);  
+    
+    //step4 setup the view matrix 
+    const viewMatrixOutput = [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+    ]
+
+    //step5 put the view matrix into a translator and invert
+    // Its meant to place the camera at a position in x,y and z whatever that means
+    translator(viewMatrixOutput, viewMatrixOutput, [0, 0, 1]);
+    invert(viewMatrixOutput, viewMatrixOutput);
+
     var moveX = 0.0;
     var moveY = 0.0;
-    let rotateX = 0.0;
-    let rotateY = 0.0;
-    let rotateZ = 0.0;
+    var rotateX = 0.0;
+    var rotateY = 0.0;
+    var rotateZ = 0.0;
 
     function animate() {
         requestAnimationFrame(animate);
         gl.clearColor(0.0, 0.2, 0.0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        //step5 update the uniforms in the animation funciton
         gl.uniform1f(moveXLocation, moveX);
         gl.uniform1f(moveYLocation, moveY);
 
-        //step7 rotation matrix        
         const matrixX = [
             1, 0, 0, 0,
             0, Math.cos(rotateX), -Math.sin(rotateX), 0,
@@ -215,6 +242,10 @@ function main(){
         gl.uniformMatrix4fv(rotateYLocation, false, matrixY);
         gl.uniformMatrix4fv(rotateZLocation, false, matrixZ);
 
+        //step7 send the projetion and view matrix to vertex shader
+        gl.uniformMatrix4fv(perspectiveLocation, false, perspectiveMatrixOutput);
+        gl.uniformMatrix4fv(viewLocation, false, viewMatrixOutput);
+
         //first square red
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         gl.drawArrays(gl.TRIANGLES, 3, 3);
@@ -224,7 +255,6 @@ function main(){
     }
     animate();
 
-    //step6 event listeners for the keys pressed
     document.addEventListener('keydown', function (event) {
         const moveAmount = 0.05;
         switch (event.key) {
@@ -259,3 +289,139 @@ try {
 } catch (e) {
     showError(`Uncaught JavaScript exception: ${e}`);
 }
+//step1 add Adonis perpective, translator and invert funcitons
+//start of perspective function
+function perspective(out, fovy, aspect, near, far) {
+    var f = 1.0 / Math.tan(fovy / 2),
+        nf;
+    out[0] = f / aspect;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+    out[4] = 0;
+    out[5] = f;
+    out[6] = 0;
+    out[7] = 0;
+    out[8] = 0;
+    out[9] = 0;
+    out[11] = -1;
+    out[12] = 0;
+    out[13] = 0;
+    out[15] = 0;
+
+    if (far != null && far !== Infinity) {
+      nf = 1 / (near - far);
+      out[10] = (far + near) * nf;
+      out[14] = 2 * far * near * nf;
+    } else {
+      out[10] = -1;
+      out[14] = -2 * near;
+    }
+
+    return out;
+  }//End of perspective funciton
+
+  //Start of tranlator function 
+   function translator(out, a, v) {
+    var x = v[0],
+        y = v[1],
+        z = v[2];
+    var a00, a01, a02, a03;
+    var a10, a11, a12, a13;
+    var a20, a21, a22, a23;
+
+    if (a === out) {
+      out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+      out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+      out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+      out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+    } else {
+      a00 = a[0];
+      a01 = a[1];
+      a02 = a[2];
+      a03 = a[3];
+      a10 = a[4];
+      a11 = a[5];
+      a12 = a[6];
+      a13 = a[7];
+      a20 = a[8];
+      a21 = a[9];
+      a22 = a[10];
+      a23 = a[11];
+      out[0] = a00;
+      out[1] = a01;
+      out[2] = a02;
+      out[3] = a03;
+      out[4] = a10;
+      out[5] = a11;
+      out[6] = a12;
+      out[7] = a13;
+      out[8] = a20;
+      out[9] = a21;
+      out[10] = a22;
+      out[11] = a23;
+      out[12] = a00 * x + a10 * y + a20 * z + a[12];
+      out[13] = a01 * x + a11 * y + a21 * z + a[13];
+      out[14] = a02 * x + a12 * y + a22 * z + a[14];
+      out[15] = a03 * x + a13 * y + a23 * z + a[15];
+    }
+
+    return out;
+  }//End of translator function
+
+  //Start of invert function
+  function invert(out, a) {
+    var a00 = a[0],
+        a01 = a[1],
+        a02 = a[2],
+        a03 = a[3];
+    var a10 = a[4],
+        a11 = a[5],
+        a12 = a[6],
+        a13 = a[7];
+    var a20 = a[8],
+        a21 = a[9],
+        a22 = a[10],
+        a23 = a[11];
+    var a30 = a[12],
+        a31 = a[13],
+        a32 = a[14],
+        a33 = a[15];
+    var b00 = a00 * a11 - a01 * a10;
+    var b01 = a00 * a12 - a02 * a10;
+    var b02 = a00 * a13 - a03 * a10;
+    var b03 = a01 * a12 - a02 * a11;
+    var b04 = a01 * a13 - a03 * a11;
+    var b05 = a02 * a13 - a03 * a12;
+    var b06 = a20 * a31 - a21 * a30;
+    var b07 = a20 * a32 - a22 * a30;
+    var b08 = a20 * a33 - a23 * a30;
+    var b09 = a21 * a32 - a22 * a31;
+    var b10 = a21 * a33 - a23 * a31;
+    var b11 = a22 * a33 - a23 * a32; // Calculate the determinant
+
+    var det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+    if (!det) {
+      return null;
+    }
+
+    det = 1.0 / det;
+    out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+    out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+    out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+    out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+    out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+    out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+    out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+    out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+    out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+    out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+    out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+    out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+    out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
+    out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+    out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
+    out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+    return out;
+  }//End of invert function

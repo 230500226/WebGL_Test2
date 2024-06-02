@@ -181,7 +181,6 @@ function main(){
     let rotateZ = 0.0;
 
     function animate() {
-        requestAnimationFrame(animate);
         gl.clearColor(0.0, 0.2, 0.0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -221,6 +220,8 @@ function main(){
         //second square blue
         gl.drawArrays(gl.TRIANGLES, 6, 3);
         gl.drawArrays(gl.TRIANGLES, 9, 3);
+
+        requestAnimationFrame(animate);
     }
     animate();
 

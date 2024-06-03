@@ -6,7 +6,7 @@ function showError(errorText) {
     console.error(errorText);
 }
 
-showError("This is Q3");
+showError("This is Q3Perspective");
 
 function main(){
     const canvas  = document.getElementById("IDcanvas");
